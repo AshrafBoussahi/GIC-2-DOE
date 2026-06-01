@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "qGridX"
+version = "0.1.0"
+description = "Hybrid quantum-classical optimization pipeline for power-grid battery/microgrid planning (PCE-GQE)"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "qGridX Contributors" }]
+keywords = ["quantum", "optimization", "power-grid", "BESS", "CUDA-Q", "GQE", "PCE"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "torch>=2.2",
+    "torch_geometric>=2.5",
+    "pandapower>=2.13",
+    "pyomo>=6.7",
+    "highspy>=1.5",
+    "numpy>=1.26",
+    "scipy>=1.12",
+    "networkx>=3.2",
+    "matplotlib>=3.8",
+    "pandas>=2.1",
+    "pydantic>=2.5",
+    "pyyaml>=6.0",
+    "joblib>=1.3",
+    "tqdm>=4.66",
+    "click>=8.1",
+]
+
+[project.optional-dependencies]
+gpu = ["cuda-quantum>=0.7"]
+gurobi = ["gurobipy>=10.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-timeout>=2.2",
+    "black",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+qgridx = "qgridx.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["qgridx*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m not slow')",
+    "gpu: marks tests that require a CUDA-capable GPU",
+    "gurobi: marks tests that require a Gurobi license",
+]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true

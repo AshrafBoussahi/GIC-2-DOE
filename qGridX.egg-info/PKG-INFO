@@ -1,0 +1,109 @@
+Metadata-Version: 2.4
+Name: qGridX
+Version: 0.1.0
+Summary: Hybrid quantum-classical optimization for power-grid storage planning
+Author: qGridX contributors
+License: MIT
+Project-URL: Homepage, https://github.com/qgridx/qgridx
+Project-URL: Documentation, https://github.com/qgridx/qgridx/tree/main/docs
+Project-URL: Repository, https://github.com/qgridx/qgridx
+Keywords: quantum computing,power systems,combinatorial optimization,energy storage,PCE,GQE
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+License-File: NOTICE
+Requires-Dist: torch>=2.0.0
+Requires-Dist: torch-geometric>=2.3.0
+Requires-Dist: qiskit>=1.0.0
+Requires-Dist: pandapower>=2.13
+Requires-Dist: pyomo>=6.6
+Requires-Dist: numpy>=1.24
+Requires-Dist: scipy>=1.11
+Requires-Dist: networkx>=3.1
+Requires-Dist: matplotlib>=3.7
+Requires-Dist: pandas>=2.0
+Requires-Dist: pydantic>=2.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: joblib>=1.3
+Requires-Dist: tqdm>=4.65
+Provides-Extra: gpu
+Requires-Dist: cuda-quantum>=0.8; extra == "gpu"
+Provides-Extra: gurobi
+Requires-Dist: gurobipy>=11.0; extra == "gurobi"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4; extra == "dev"
+Requires-Dist: pytest-cov>=4.1; extra == "dev"
+Requires-Dist: black>=23.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.5; extra == "dev"
+Dynamic: license-file
+
+# qGridX
+
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**Hybrid quantum-classical optimization for power-grid storage planning.**
+
+qGridX implements a four-stage *cut-guided amortized sampling* pipeline that
+combines a PCE-restricted Generative Quantum Eigensolver (PCE-GQE) with
+classical power-system physics to solve the battery/microgrid
+siting-and-sizing problem under AC power-flow and contingency constraints.
+
+## Quickstart
+
+```bash
+pip install -e ".[dev]"
+qgridx run --config configs/ieee14_demo.yaml
+```
+
+## Architecture
+
+The pipeline runs as a loop:
+
+1. **Classical preprocessing** — Load power system, build scenarios, initialize Ising model
+2. **Quantum master (PCE-GQE)** — GNN encoder reads Ising graph; Transformer decoder generates circuits; CUDA-Q executes them; 3-basis readout estimates correlations
+3. **Projection ILP** — Snap raw bitstrings to feasible plans (budget, one-hot sizing)
+4. **Classical subproblem** — DC-SCOPF with N-1 checks, emit cuts, update via DPO
+
+> **Important:** This is a *cut-guided heuristic*, not Benders decomposition.
+> See [docs/architecture.md](docs/architecture.md) for the three correctness
+> rules enforced in code.
+
+## Documentation
+
+- [Usage Guide](docs/usage.md) — Installation, config reference, extension guide
+- [Architecture](docs/architecture.md) — 4-stage loop, correctness rules, honest scope
+
+## Citation
+
+```bibtex
+@article{conditional_gqe_2025,
+  title={Conditional Generative Quantum Eigensolver for Combinatorial Optimization},
+  journal={arXiv preprint arXiv:2501.16986},
+  year={2025}
+}
+
+@article{pce_sciorilli_2024,
+  title={Few-qubit quantum optimization},
+  author={Sciorilli, Torsten and others},
+  year={2024}
+}
+```
+
+## Attribution
+
+This package incorporates ideas and patterns from the
+[`gqco`](https://github.com/shunyaist/generative-quantum-combinatorial-optimization)
+reference implementation (MIT licensed).  See [NOTICE](NOTICE) for full
+attribution.
+
+## License
+
+MIT License. See [LICENSE](LICENSE).

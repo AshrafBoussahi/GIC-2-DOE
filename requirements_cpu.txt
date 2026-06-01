@@ -1,0 +1,18 @@
+# CPU-only install — no CUDA-Q GPU backend.
+# Install with: pip install -r requirements_cpu.txt
+# The package will fall back to cpu_sim backend automatically.
+torch>=2.2
+torch_geometric>=2.5
+pandapower>=2.13
+pyomo>=6.7
+highspy>=1.5
+numpy>=1.26
+scipy>=1.12
+networkx>=3.2
+matplotlib>=3.8
+pandas>=2.1
+pydantic>=2.5
+pyyaml>=6.0
+joblib>=1.3
+tqdm>=4.66
+click>=8.1
