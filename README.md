@@ -58,14 +58,13 @@ Combined, these produce a system that is:
 
 ## Architecture
 
-```
-
 
 <img width="1769" height="645" alt="GIC2DOW" src="https://github.com/user-attachments/assets/954d162d-e200-44ee-a070-620a3806e91c" />
 
 
 
 
+```
 
  ┌─────────────────────────────────────────────────────────────────────┐
  │           CUT-GUIDED AMORTISED SAMPLING LOOP  (Heuristic, R1)       │
