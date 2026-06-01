@@ -1,0 +1,125 @@
+# ===========================================================================
+# qGridX — IEEE 14-bus demonstration experiment
+# ===========================================================================
+# A deliberately small configuration meant to run end-to-end on a laptop CPU
+# in a few minutes WHEN THE USER RUNS IT. The coding agent should NOT execute
+# this; it is the target the example script is written against.
+#
+# To scale up: copy this file, change `problem.system.name` to ieee30 / case118,
+# widen the candidate set, raise scenario counts, M_circuits and loop.max_iters,
+# and switch backend.name to gpu_sim. Nothing else needs to change.
+# ===========================================================================
+
+problem:
+  system:
+    name: ieee14                 # pandapower built-in; no external files needed
+    source: pandapower_builtin
+    path: null
+    base_mva: 100.0
+
+  # Candidate decision space. Index 0 of size_levels means "no battery here".
+  # With 4 size levels, logarithmic sizing needs L = ceil(log2(4)) = 2 bits.
+  candidates:
+    bess_buses: [3, 4, 5, 9, 10, 12, 13, 14]   # 8 candidate buses
+    size_levels_mwh: [0, 25, 50, 100]          # 4 levels -> L = 2 sizing bits
+    microgrid_boundaries:
+      - [9, 10, 14]                            # one candidate islandable group
+      - [12, 13]                               # another
+  # binary variable count m (informational; computed at runtime):
+  #   per bus: 1 build bit + 2 sizing bits = 3; 8 buses -> 24; + 2 microgrid bits = 26
+  #   with PCE k = 2  ->  n = ceil(sqrt(26)) = 6 qubits
+
+  costs:
+    bess_capex_per_mwh: 200000.0     # $ per MWh of energy capacity
+    bess_power_capex_per_mw: 150000.0
+    microgrid_fixed_cost: 500000.0
+
+  budget:
+    total_capex: 8000000.0           # total $ available
+    max_sites: 4                     # at most 4 battery sites
+
+  scenarios:
+    n_weather: 3                     # 3 weather realizations
+    n_load: 2                        # 2 load levels  (3 x 2 = 6 operating points)
+    n1_contingencies: auto_from_n1_set
+    explicit_contingencies: null
+    weather_data: null               # null -> synthesize deterministically from seed
+    seed: 0
+
+  encoding:
+    sizing_scheme: log_binary        # log_binary | one_hot
+    mutex_penalty: 10.0
+    budget_penalty: 5.0
+
+  meta: {}
+
+# ---------------------------------------------------------------------------
+# Pipeline: every stage is a registered, swappable component selected by name.
+# ---------------------------------------------------------------------------
+pipeline:
+
+  encoder:
+    name: log_binary_sizing
+    mutex_penalty: 10.0
+    budget_penalty: 5.0
+
+  quantum_master:
+    name: pce_gqe                    # alt registered option: random_baseline
+    pce:
+      k: 2                           # compression degree; n ~= ceil(m**(1/k))
+      alpha: auto                    # tanh sharpness; auto -> derived from n
+      beta: 0.5
+      n_qubits: auto                 # auto -> derived from m and k
+    ansatz:
+      n_layers: auto                 # auto -> proportional to n (kept shallow)
+      entangle_pattern: brickwork
+      topology: linear               # match a NISQ-friendly connectivity
+    backend:
+      name: cpu_sim                  # cpu_sim | gpu_sim | hardware (stub)
+      shots: 2000
+    samples_per_step: 16             # M circuits per loop iteration (small for demo)
+
+  model:
+    encoder_gnn:
+      hidden: 128
+      layers: 3
+    decoder:
+      n_layer: 4                     # small from-scratch decoder (NOT a pretrained LLM)
+      n_head: 4
+      n_embd: 128
+      max_len: 256
+    dpo:
+      beta: 0.1
+      lr: 0.0001
+      ref_policy: frozen_init        # reference policy is a frozen copy of init
+
+  projection:
+    name: confidence_ilp
+    solver: highs                    # open-source; no Gurobi license required
+    local_search: true
+
+  subproblem:
+    name: dc_scopf                   # alt registered option: socp_ac
+    ac_relaxation: socp_optional
+    solver: highs
+
+  cuts:
+    pool_cap_K: 20                   # R2: keep at most 20 cuts
+    rescale: max_abs                 # R2: bound coefficient range each iteration
+
+  loop:
+    max_iters: 10                    # short loop for the demo
+    convergence_tol: 0.001
+    M_circuits: 16
+
+  baseline:
+    name: milp_misocp
+    solver: auto                     # auto -> Gurobi if licensed, else HiGHS
+    enabled: true
+
+  experiment:
+    seed: 0
+    out_dir: ./runs/ieee14_demo
+    save_plots: true
+    log_backend: stdout              # wandb optional and off by default
+    device: cpu                      # cpu | cuda

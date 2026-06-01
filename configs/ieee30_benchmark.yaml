@@ -1,0 +1,89 @@
+# qGridX — IEEE 30-bus benchmark configuration
+problem:
+  system:
+    name: ieee30
+    source: pandapower_builtin
+    path: null
+    base_mva: 100.0
+  candidates:
+    bess_buses: [5, 7, 10, 12, 14, 15, 16, 17, 18, 21, 23, 26]
+    size_levels_mwh: [0, 25, 50, 100, 200]
+    microgrid_boundaries:
+      - [15, 16, 17]
+      - [21, 23]
+  costs:
+    bess_capex_per_mwh: 200000.0
+    bess_power_capex_per_mw: 150000.0
+    microgrid_fixed_cost: 500000.0
+  budget:
+    total_capex: 20000000.0
+    max_sites: 6
+  scenarios:
+    n_weather: 5
+    n_load: 3
+    n1_contingencies: auto_from_n1_set
+    seed: 42
+  encoding:
+    sizing_scheme: log_binary
+    mutex_penalty: 10.0
+    budget_penalty: 5.0
+  meta: {}
+
+pipeline:
+  encoder:
+    name: log_binary_sizing
+    mutex_penalty: 10.0
+    budget_penalty: 5.0
+  quantum_master:
+    name: pce_gqe
+    pce:
+      k: 2
+      alpha: auto
+      beta: 0.5
+      n_qubits: auto
+    ansatz:
+      n_layers: auto
+      entangle_pattern: brickwork
+      topology: linear
+    backend:
+      name: gpu_sim
+      shots: 4000
+    samples_per_step: 32
+  model:
+    encoder_gnn:
+      hidden: 128
+      layers: 3
+    decoder:
+      n_layer: 4
+      n_head: 4
+      n_embd: 128
+      max_len: 256
+    dpo:
+      beta: 0.1
+      lr: 0.0001
+      ref_policy: frozen_init
+  projection:
+    name: confidence_ilp
+    solver: highs
+    local_search: true
+  subproblem:
+    name: dc_scopf
+    ac_relaxation: socp_optional
+    solver: highs
+  cuts:
+    pool_cap_K: 30
+    rescale: max_abs
+  loop:
+    max_iters: 30
+    convergence_tol: 0.001
+    M_circuits: 32
+  baseline:
+    name: milp_misocp
+    solver: auto
+    enabled: true
+  experiment:
+    seed: 42
+    out_dir: ./runs/ieee30_benchmark
+    save_plots: true
+    log_backend: stdout
+    device: gpu

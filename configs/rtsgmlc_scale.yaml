@@ -1,0 +1,91 @@
+# qGridX — RTS-GMLC scale-up configuration
+# Requires GPU + Gurobi for practical runtimes.
+problem:
+  system:
+    name: case118
+    source: pandapower_builtin
+    path: null
+    base_mva: 100.0
+  candidates:
+    bess_buses: [5, 10, 12, 15, 17, 21, 26, 30, 34, 37, 39, 42, 45, 49, 54]
+    size_levels_mwh: [0, 50, 100, 200, 400]
+    microgrid_boundaries:
+      - [10, 12, 15]
+      - [30, 34]
+      - [45, 49]
+  costs:
+    bess_capex_per_mwh: 200000.0
+    bess_power_capex_per_mw: 150000.0
+    microgrid_fixed_cost: 750000.0
+  budget:
+    total_capex: 100000000.0
+    max_sites: 8
+  scenarios:
+    n_weather: 10
+    n_load: 5
+    n1_contingencies: auto_from_n1_set
+    seed: 123
+  encoding:
+    sizing_scheme: log_binary
+    mutex_penalty: 10.0
+    budget_penalty: 5.0
+  meta: {}
+
+pipeline:
+  encoder:
+    name: log_binary_sizing
+    mutex_penalty: 10.0
+    budget_penalty: 5.0
+  quantum_master:
+    name: pce_gqe
+    pce:
+      k: 3
+      alpha: auto
+      beta: 0.5
+      n_qubits: auto
+    ansatz:
+      n_layers: auto
+      entangle_pattern: brickwork
+      topology: linear
+    backend:
+      name: gpu_sim
+      shots: 8000
+    samples_per_step: 64
+  model:
+    encoder_gnn:
+      hidden: 256
+      layers: 4
+    decoder:
+      n_layer: 6
+      n_head: 8
+      n_embd: 256
+      max_len: 512
+    dpo:
+      beta: 0.1
+      lr: 0.00005
+      ref_policy: frozen_init
+  projection:
+    name: confidence_ilp
+    solver: gurobi
+    local_search: true
+  subproblem:
+    name: dc_scopf
+    ac_relaxation: socp_optional
+    solver: gurobi
+  cuts:
+    pool_cap_K: 50
+    rescale: max_abs
+  loop:
+    max_iters: 50
+    convergence_tol: 0.001
+    M_circuits: 64
+  baseline:
+    name: milp_misocp
+    solver: gurobi
+    enabled: true
+  experiment:
+    seed: 123
+    out_dir: ./runs/rtsgmlc_scale
+    save_plots: true
+    log_backend: stdout
+    device: cuda
